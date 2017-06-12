@@ -49,20 +49,4 @@ class PetsDataSource: NSObject, UITableViewDataSource {
     pets.insert(newPet, at: index)
   }
     
-  func dragItems(for indexPath: IndexPath) -> [UIDragItem] {
-    let pet = pets[indexPath.row]
-        
-    let itemProvider = NSItemProvider()
-    itemProvider.registerDataRepresentation(forTypeIdentifier: kUTTypeUTF8PlainText as String, visibility: .all, loadHandler: { completion in
-        
-        let data = pet.name.data(using: .utf8)
-        completion(data, nil)
-        return nil
-        
-    })
-    
-    let dragItem = UIDragItem(itemProvider: itemProvider)
-    dragItem.localObject = pet
-    return [dragItem]
-  }
 }

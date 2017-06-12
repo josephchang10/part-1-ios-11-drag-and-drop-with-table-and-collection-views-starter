@@ -49,10 +49,6 @@ public class Pet : NSObject, NSCoding {
       coder.encode(UIImagePNGRepresentation(image), forKey: Key.image)
     }
   }
-    
-    public static func canHandle(_ session: UIDropSession) -> Bool {
-        return session.canLoadObjects(ofClass: NSString.self)
-    }
 
 }
 

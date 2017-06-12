@@ -30,8 +30,6 @@ class PetsViewController: UIViewController {
     for tableView in [petsTableView, adoptedTableView] {
       if let tableView = tableView {
         tableView.dataSource = dataSourceForTableView(tableView)
-        tableView.dragDelegate = self
-        tableView.dropDelegate = self
         tableView.reloadData()
       }
     }
@@ -46,90 +44,4 @@ class PetsViewController: UIViewController {
     }
   }
 
-}
-
-extension PetsViewController: UITableViewDragDelegate {
-    func tableView(_ tableView: UITableView, itemsForBeginning session: UIDragSession, at indexPath: IndexPath) -> [UIDragItem] {
-        let dataSource = dataSourceForTableView(tableView)
-        return dataSource.dragItems(for: indexPath)
-    }
-}
-
-extension PetsViewController: UITableViewDropDelegate {
-    
-    func tableView(_ tableView: UITableView, canHandle session: UIDropSession) -> Bool {
-        return Pet.canHandle(session)
-    }
-    
-    func tableView(_ tableView: UITableView, dropSessionDidUpdate session: UIDropSession, withDestinationIndexPath destinationIndexPath: IndexPath?) -> UITableViewDropProposal {
-        if tableView.hasActiveDrag {
-            if session.items.count > 1 {
-                return UITableViewDropProposal(operation: .cancel)
-            } else {
-                return UITableViewDropProposal(dropOperation: .move, intent: .insertAtDestinationIndexPath)
-            }
-        } else {
-            return UITableViewDropProposal(dropOperation: .copy, intent: .insertAtDestinationIndexPath)
-        }
-    }
-    
-    func tableView(_ tableView: UITableView, performDropWith coordinator: UITableViewDropCoordinator) {
-        
-        let dataSource = dataSourceForTableView(tableView)
-        
-        let destinationIndexPath: IndexPath
-        if let indexPath = coordinator.destinationIndexPath {
-            destinationIndexPath = indexPath
-        } else {
-            let section = tableView.numberOfSections - 1
-            let row = tableView.numberOfRows(inSection: section)
-            destinationIndexPath = IndexPath(row: row, section: section)
-        }
-        
-        for item in coordinator.items {
-            
-            // Item 来自同一个 App，同一个 table view
-            if let sourceIndexPath = item.sourceIndexPath {
-                print("同一个 App - 同一个 tableview")
-                dataSource.moveItem(at: sourceIndexPath.row, to: destinationIndexPath.row)
-                DispatchQueue.main.async {
-                    tableView.beginUpdates()
-                    tableView.deleteRows(at: [sourceIndexPath], with: .automatic)
-                    tableView.insertRows(at: [destinationIndexPath], with: .automatic)
-                    tableView.endUpdates()
-                }
-            }
-            
-            // TODO: Item 来自同一个 App，不同的 table view
-            else if let pet = item.dragItem.localObject as? Pet {
-                print("同一个 App - 不同的 tableview")
-                dataSource.addPet(pet, at: destinationIndexPath.row)
-                DispatchQueue.main.async {
-                    tableView.insertRows(at: [destinationIndexPath], with: .automatic)
-                }
-            }
-            
-            // Item 来自不同的 App
-            else {
-                print("不同的 App")
-                
-                let context = coordinator.drop(item.dragItem, toPlaceholderInsertedAt: destinationIndexPath, withReuseIdentifier: "PetCell", rowHeight: 110, cellUpdateHandler: { (cell) in
-                    cell.textLabel?.text = "加载中..."
-                })
-                
-                let itemProvider = item.dragItem.itemProvider
-                itemProvider.loadObject(ofClass: NSString.self, completionHandler: { (string, error) in
-                    if let string = string as? String {
-                        let pet = Pet(name: string, type: "Unknown", image: nil)
-                        DispatchQueue.main.async {
-                            context.commitInsertion(dataSourceUpdates: { (indexPath) in
-                                dataSource.addPet(pet, at: destinationIndexPath.row)
-                            })
-                        }
-                    }
-                })
-            }
-        }
-        
-    }
 }
